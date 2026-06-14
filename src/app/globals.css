@@ -1,0 +1,300 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   Aquí — Sistema de diseño
+   Replica fielmente la identidad del PDF de pitch comercial
+   ============================================================ */
+
+:root {
+  /* Brand colors — wayfinding palette */
+  --ink: #0F1B2E;
+  --ink-soft: #1A2840;
+  --teal: #0F4C5C;
+  --teal-dark: #0A3640;
+  --teal-light: #DBEEF1;
+  --red: #E63946;
+  --red-light: #FBE3E5;
+  --yellow: #F5C842;
+  --yellow-light: #FFF4D1;
+  --cream: #FAF6EF;
+  --warm-50: #F7F7F5;
+  --warm-100: #EFEEEA;
+  --warm-300: #C9C7C0;
+  --warm-500: #6B6962;
+  --warm-700: #3D3B36;
+  --white: #FFFFFF;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+html {
+  font-feature-settings: 'ss01', 'cv11';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: var(--white);
+  color: var(--ink);
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif;
+  touch-action: manipulation;
+}
+
+/* ============================================================
+   Wayfinding section marker — the signature element
+   "→ 03 NAVEGACIÓN" — used across major UI moments
+   ============================================================ */
+
+.sec-marker {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.sec-marker .arrow {
+  font-size: 28px;
+  font-weight: 300;
+  color: var(--red);
+  line-height: 1;
+}
+.sec-marker .num {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--red);
+  letter-spacing: 0.15em;
+}
+.sec-marker .label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--warm-500);
+}
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.15s;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+}
+.btn-primary {
+  background: var(--ink);
+  color: var(--white);
+}
+.btn-primary:active {
+  background: var(--ink-soft);
+  transform: scale(0.98);
+}
+.btn-accent {
+  background: var(--red);
+  color: var(--white);
+}
+.btn-accent:active {
+  transform: scale(0.98);
+  filter: brightness(0.95);
+}
+.btn-outline {
+  background: var(--white);
+  border: 1px solid var(--warm-100);
+  color: var(--ink);
+}
+.btn-outline:active {
+  background: var(--warm-50);
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--ink);
+}
+.btn-ghost:active {
+  background: var(--warm-50);
+}
+
+/* ============================================================
+   Card surfaces
+   ============================================================ */
+
+.surface {
+  background: var(--white);
+  border: 1px solid var(--warm-100);
+  border-radius: 12px;
+}
+.surface-warm {
+  background: var(--warm-50);
+  border-radius: 12px;
+}
+.surface-dark {
+  background: var(--ink);
+  color: var(--white);
+  border-radius: 12px;
+}
+
+/* ============================================================
+   Typography utilities
+   ============================================================ */
+
+.eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--red);
+}
+.label-text {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--warm-500);
+}
+
+/* ============================================================
+   Brand mark — "Aquí." with red period
+   ============================================================ */
+
+.brand-mark {
+  display: inline-flex;
+  align-items: baseline;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+}
+.brand-mark .period {
+  color: var(--red);
+}
+.brand-mark.on-dark {
+  color: var(--white);
+}
+
+/* Brand bullet — red dot used as a marker */
+.brand-bullet::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--red);
+  margin-right: 10px;
+  vertical-align: middle;
+}
+
+/* ============================================================
+   Floor plan SVG — used in map view
+   ============================================================ */
+
+.floor-svg .building {
+  fill: var(--warm-100);
+  stroke: var(--warm-300);
+  stroke-width: 1;
+}
+.floor-svg .walkway {
+  stroke: var(--warm-300);
+  stroke-width: 14;
+  fill: none;
+  stroke-linecap: round;
+}
+.floor-svg .route {
+  stroke: var(--ink);
+  stroke-width: 5;
+  fill: none;
+  stroke-linecap: round;
+  stroke-dasharray: 8 6;
+  animation: dash-route 1.2s linear infinite;
+}
+.floor-svg .you-pulse {
+  fill: var(--red);
+  opacity: 0.4;
+  animation: pulse-pin 1.5s ease-out infinite;
+}
+.floor-svg .you-dot {
+  fill: var(--red);
+  stroke: var(--white);
+  stroke-width: 2;
+}
+.floor-svg .dest-pin {
+  fill: var(--ink);
+  stroke: var(--white);
+  stroke-width: 2;
+}
+.floor-svg .poi {
+  fill: var(--white);
+  stroke: var(--warm-300);
+  stroke-width: 1.5;
+}
+.floor-svg .poi-label {
+  font-size: 9px;
+  fill: var(--warm-700);
+  font-weight: 500;
+  pointer-events: none;
+}
+.floor-svg .room-label {
+  font-size: 11px;
+  fill: var(--warm-500);
+  font-weight: 600;
+  pointer-events: none;
+}
+
+@keyframes dash-route { to { stroke-dashoffset: -28; } }
+@keyframes pulse-pin {
+  0% { r: 14; opacity: 0.5; }
+  100% { r: 28; opacity: 0; }
+}
+
+/* ============================================================
+   QR scanner styling overrides for html5-qrcode
+   ============================================================ */
+
+#qr-reader {
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  border: none !important;
+}
+#qr-reader video {
+  border-radius: 16px !important;
+  width: 100% !important;
+  display: block !important;
+}
+#qr-reader__dashboard_section_csr button {
+  display: none !important;
+}
+#qr-reader__dashboard_section_swaplink {
+  display: none !important;
+}
+
+/* ============================================================
+   Accessibility — focus-visible styling
+   ============================================================ */
+
+:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   Print styles for QR codes
+   ============================================================ */
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: white !important; }
+  .print-page {
+    page-break-after: always;
+    padding: 0.5in;
+  }
+}
