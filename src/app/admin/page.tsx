@@ -6,6 +6,7 @@ import { Logo } from '@/components/Logo';
 import { SectionMarker } from '@/components/SectionMarker';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { CheckIcon } from '@/components/icons';
+import { SignOutButton } from '@/components/SignOutButton';
 
 export default function AdminDashboard() {
   const venues = Object.values(DEMO_VENUES);
@@ -16,9 +17,12 @@ export default function AdminDashboard() {
       {/* Header */}
       <header className="border-b border-warm-100 px-5 py-4 flex items-center justify-between">
         <Logo size="md" />
-        <Link href="/" className="text-xs text-warm-500 hover:text-ink">
-          ← Ir al sitio
-        </Link>
+        <div className="flex items-center gap-4">
+          <SignOutButton />
+          <Link href="/" className="text-xs text-warm-500 hover:text-ink">
+            ← Ir al sitio
+          </Link>
+        </div>
       </header>
 
       <div className="max-w-3xl mx-auto px-5 py-8">

@@ -3,14 +3,15 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { getDemoVenue } from '@/data/demo-venue';
+import { createClient } from '@/lib/supabase/client';
+import { fetchVenue } from '@/lib/venues';
 import type { Venue } from '@/lib/types';
 
 /**
  * Resolves the current venue from the `[venueId]` route segment.
  *
- * Centralises the load logic that every visitor/admin page used to repeat.
- * Today it reads from the bundled demo data; when Supabase-backed venues
- * land, this is the single place to add the fetch + fallback.
+ * Tries Supabase first; falls back to bundled demo data when Supabase is not
+ * configured or the venue isn't found in the DB.
  *
  * @param fallbackId venue id to use when the route has no `[venueId]` (default `'demo'`).
  * @returns `venueId` from the route and the loaded `venue` (`null` if not found).
@@ -23,8 +24,21 @@ export function useVenue(fallbackId = 'demo'): { venueId: string; venue: Venue |
   const [venue, setVenue] = useState<Venue | null>(() => getDemoVenue(venueId));
 
   useEffect(() => {
-    // TODO: fetch from Supabase first, fall back to demo data.
-    setVenue(getDemoVenue(venueId));
+    let cancelled = false;
+
+    const client = createClient();
+    if (!client) {
+      setVenue(getDemoVenue(venueId));
+      return;
+    }
+
+    fetchVenue(client, venueId).then((v) => {
+      if (!cancelled) setVenue(v ?? getDemoVenue(venueId));
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [venueId]);
 
   return { venueId, venue };

@@ -124,12 +124,18 @@ drop policy if exists "Public update tickets"      on tickets;
 drop policy if exists "Public insert checkins"     on checkins;
 drop policy if exists "Public insert venues"       on venues;
 drop policy if exists "Public update venues"       on venues;
+drop policy if exists "Public insert points"       on points;
+drop policy if exists "Public update points"       on points;
+drop policy if exists "Public delete points"       on points;
 
 create policy "Public insert tickets"  on tickets  for insert with check (true);
 create policy "Public update tickets"  on tickets  for update using (true);
 create policy "Public insert checkins" on checkins for insert with check (true);
 create policy "Public insert venues"   on venues   for insert with check (true);
 create policy "Public update venues"   on venues   for update using (true);
+create policy "Public insert points"   on points   for insert with check (true);
+create policy "Public update points"   on points   for update using (true);
+create policy "Public delete points"   on points   for delete using (true);
 
 
 -- ============================================================

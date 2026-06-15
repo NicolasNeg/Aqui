@@ -6,6 +6,7 @@ import { Logo } from '@/components/Logo';
 import { SectionMarker } from '@/components/SectionMarker';
 import { FloorPlan } from '@/components/FloorPlan';
 import { CheckIcon, QrCodeIcon, TicketIcon } from '@/components/icons';
+import { SignOutButton } from '@/components/SignOutButton';
 
 export default function VenueAdmin() {
   const { venueId, venue } = useVenue();
@@ -22,9 +23,12 @@ export default function VenueAdmin() {
     <main className="min-h-screen bg-white">
       <header className="border-b border-warm-100 px-5 py-4 flex items-center justify-between">
         <Logo size="md" />
-        <Link href="/admin" className="text-xs text-warm-500 hover:text-ink">
-          ← Todos los venues
-        </Link>
+        <div className="flex items-center gap-4">
+          <SignOutButton />
+          <Link href="/admin" className="text-xs text-warm-500 hover:text-ink">
+            ← Todos los venues
+          </Link>
+        </div>
       </header>
 
       <div className="max-w-3xl mx-auto px-5 py-8">
