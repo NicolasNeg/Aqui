@@ -281,7 +281,7 @@ export default function LandingPage() {
         <div className="border-t border-white/10">
           <div className="max-w-6xl mx-auto px-5 sm:px-8 py-6 flex flex-wrap items-center justify-between gap-3 text-xs text-white/40">
             <div>Aquí · Sistema de navegación, información y acceso</div>
-            <div>Romita, Guanajuato · MX</div>
+            <div>Guanajuato · MX</div>
           </div>
         </div>
       </section>

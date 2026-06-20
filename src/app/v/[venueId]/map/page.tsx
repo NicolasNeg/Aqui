@@ -49,11 +49,11 @@ export default function MapView() {
   const segmentDistance =
     route.path.length >= 2
       ? Math.round(
-          Math.hypot(
-            venue.points[route.path[1]].x - venue.points[route.path[0]].x,
-            venue.points[route.path[1]].y - venue.points[route.path[0]].y
-          )
+        Math.hypot(
+          venue.points[route.path[1]].x - venue.points[route.path[0]].x,
+          venue.points[route.path[1]].y - venue.points[route.path[0]].y
         )
+      )
       : 0;
 
   return (
@@ -125,7 +125,7 @@ export default function MapView() {
             style={{ background: '#0F4C5C' }}
           >
             <LayersIcon size={18} />
-            Activar vista AR con flecha 3D
+            Activar Realidad Aumentada
           </Link>
         </div>
       </main>

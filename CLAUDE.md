@@ -25,13 +25,13 @@ Copy `.env.local.example` to `.env.local`. Supabase vars are optional — withou
 | Prefix | Audience |
 |---|---|
 | `/v/[venueId]/*` | Visitor-facing (mobile, no auth) |
-| `/admin/*` | Venue admin (no auth yet — planned) |
+| `/admin/*` | Venue admin (Supabase auth when configured; open in demo mode) |
 
 Visitor sub-routes: `page.tsx` (scan / destination list) → `map/page.tsx` (SVG floor plan + route) → `ar/page.tsx` (camera + compass arrow). Ticketed venues add `t/[ticketCode]/page.tsx` (guest QR view) and `checkin/page.tsx` (staff scanner).
 
 ### Data flow
 
-All pages load venue data through `useVenue` (`src/hooks/useVenue.ts`). Today it reads from the bundled demo data in `src/data/demo-venue.ts`. **This hook is the single place to add Supabase fetching** — a TODO comment already marks the spot. The hook does lazy init to keep SSR and the first client render in sync.
+All pages load venue data through `useVenue` (`src/hooks/useVenue.ts`). The hook tries Supabase first via `fetchVenue` (`src/lib/venues.ts`), then falls back to bundled demo data in `src/data/demo-venue.ts`. Lazy init keeps SSR and the first client render in sync (no loading flash).
 
 ### Venue model (`src/lib/types.ts`)
 
@@ -53,9 +53,15 @@ Two QR types coexist:
 
 Both parsers accept either a full URL or a bare identifier, so printed QRs and manual entry both work.
 
-### Supabase integration (`src/lib/supabase/`)
+### Supabase integration
 
-`getSupabaseEnv()` / `isSupabaseConfigured()` in `env.ts` are the single source of truth for whether a real DB is wired up (checks for the placeholder host `tuproyecto`). `client.ts` and `server.ts` export the browser and server Supabase clients respectively. `tickets.ts` contains the `TicketRow` DB shape and `mapTicketRow` to convert snake_case DB rows to camelCase domain `Ticket` objects.
+`src/lib/supabase/env.ts` — `isSupabaseConfigured()` is the single source of truth for whether a real DB is wired up (checks for placeholder host `tuproyecto`). `client.ts` / `server.ts` export the browser and server Supabase clients.
+
+`src/lib/venues.ts` — `fetchVenue(client, id)` fetches a venue row + its point rows and maps them to the domain `Venue` type. `VenueConfig` is a JSONB blob on the venues table that holds `floorWidth`, `floorHeight`, `buildings`, `paths`, and `logoUrl`.
+
+`src/lib/tickets.ts` — `TicketRow` DB shape and `mapTicketRow` to convert snake_case rows to camelCase domain `Ticket` objects.
+
+`src/middleware.ts` — protects `/admin/*` routes. Passes through when Supabase is not configured. When configured, redirects unauthenticated requests to `/admin/login` and bounces authenticated users away from the login page.
 
 ### Adding a new venue
 
