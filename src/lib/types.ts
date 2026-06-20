@@ -29,9 +29,11 @@ export interface Point {
   color?: string;
   description?: string;
   imageUrl?: string;
+  audioUrl?: string;
 }
 
 export interface Building {
+  id?: string;
   x: number;
   y: number;
   w: number;

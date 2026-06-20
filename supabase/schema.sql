@@ -153,3 +153,32 @@ select
 from venues v
 left join tickets t on t.venue_id = v.id
 group by v.id, v.name;
+
+
+-- ============================================================
+-- MIGRATIONS (apply after initial schema)
+-- ============================================================
+
+-- Add audio support to points
+ALTER TABLE points ADD COLUMN IF NOT EXISTS audio_url text;
+
+-- Supabase Storage: venue media bucket
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('venue-media', 'venue-media', true)
+ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "Public read venue-media"    ON storage.objects;
+DROP POLICY IF EXISTS "Public insert venue-media"  ON storage.objects;
+DROP POLICY IF EXISTS "Public update venue-media"  ON storage.objects;
+
+CREATE POLICY "Public read venue-media"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'venue-media');
+
+CREATE POLICY "Public insert venue-media"
+  ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'venue-media');
+
+CREATE POLICY "Public update venue-media"
+  ON storage.objects FOR UPDATE
+  USING (bucket_id = 'venue-media');

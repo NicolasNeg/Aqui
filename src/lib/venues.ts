@@ -38,6 +38,7 @@ export interface PointRow {
   color: string | null;
   description: string | null;
   image_url: string | null;
+  audio_url: string | null;
 }
 
 function mapPointRow(row: PointRow): Point {
@@ -52,6 +53,7 @@ function mapPointRow(row: PointRow): Point {
     ...(row.color != null ? { color: row.color } : {}),
     ...(row.description != null ? { description: row.description } : {}),
     ...(row.image_url != null ? { imageUrl: row.image_url } : {}),
+    ...(row.audio_url != null ? { audioUrl: row.audio_url } : {}),
   };
 }
 
