@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { DEMO_VENUES } from '@/data/demo-venue';
 import { Logo } from '@/components/Logo';
 import { SectionMarker } from '@/components/SectionMarker';
@@ -12,6 +13,7 @@ import { SignOutButton } from '@/components/SignOutButton';
 import type { Venue } from '@/lib/types';
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const supabaseReady = isSupabaseConfigured();
   const [venues, setVenues] = useState<Venue[]>(Object.values(DEMO_VENUES));
 
@@ -87,11 +89,11 @@ export default function AdminDashboard() {
 
         <div className="space-y-3">
           {venues.map((venue) => (
-            <Link
+            <div
               key={venue.id}
-              href={`/admin/${venue.id}`}
-              className="surface p-5 flex items-center gap-4 active:bg-warm-50 transition-colors"
-              style={{ textDecoration: 'none', color: 'inherit' }}
+              className="surface p-5 flex items-center gap-4 active:bg-warm-50 transition-colors cursor-pointer"
+              onClick={() => router.push(`/admin/${venue.id}`)}
+              style={{ color: 'inherit' }}
             >
               <div
                 className="w-12 h-12 rounded-xl flex items-center justify-center"
@@ -111,11 +113,12 @@ export default function AdminDashboard() {
                 href={`/admin/${venue.id}/edit`}
                 onClick={e => e.stopPropagation()}
                 className="text-xs text-warm-400 hover:text-ink px-2 py-1 rounded"
+                style={{ textDecoration: 'none' }}
               >
                 Editar
               </Link>
               <span className="text-warm-300 text-lg">›</span>
-            </Link>
+            </div>
           ))}
         </div>
       </div>
