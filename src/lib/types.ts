@@ -55,6 +55,7 @@ export interface Venue {
     | 'office'
     | 'park'
     | 'event'
+    | 'restaurant'
     | 'other';
   /** Real-world center (used for outdoor GPS navigation) */
   origin?: { lat: number; lng: number };
