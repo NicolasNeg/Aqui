@@ -119,7 +119,7 @@ export function VenueEditor({ venue }: { venue: Venue }) {
   function onCanvasMouseDown(e: React.MouseEvent<SVGSVGElement>) {
     if (!svgRef.current) return;
     // Only react to direct SVG clicks (not clicks on children)
-    if (e.target !== svgRef.current && (e.target as SVGElement).tagName === 'rect' && mode !== 'room') return;
+    if ((e.target as SVGElement).tagName === 'rect' && mode !== 'room') return;
 
     if (mode === 'room') {
       const { x, y } = svgCoords(e, svgRef.current);
@@ -253,10 +253,11 @@ export function VenueEditor({ venue }: { venue: Venue }) {
     setSaveMsg('');
     try {
       const buildings: Building[] = rooms.map(({ _id: _, ...b }) => b);
-      const { error: venueErr } = await client.from('venues').update({
+      const { error: venueErr } = await client.from('venues').upsert({
+        id: venue.id,
         config: { floorWidth: venue.floorWidth, floorHeight: venue.floorHeight, buildings, paths },
         updated_at: new Date().toISOString(),
-      }).eq('id', venue.id);
+      }, { onConflict: 'id' });
       if (venueErr) throw venueErr;
 
       if (points.length) {
@@ -410,7 +411,7 @@ export function VenueEditor({ venue }: { venue: Venue }) {
                 const pb = points.find(p => p.id === b);
                 if (!pa || !pb) return null;
                 return (
-                  <line key={i}
+                  <line key={`${a}-${b}`}
                     x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y}
                     stroke="#C8C5BE" strokeWidth={0.8} strokeDasharray="2,2"
                   />
