@@ -163,10 +163,7 @@ values (
   10485760,  -- 10 MB por archivo
   array['image/jpeg','image/png','image/webp','image/gif','audio/mpeg','audio/mp4','audio/wav','audio/ogg']
 )
-on conflict (id) do update set
-  public             = true,
-  file_size_limit    = 10485760,
-  allowed_mime_types = array['image/jpeg','image/png','image/webp','image/gif','audio/mpeg','audio/mp4','audio/wav','audio/ogg'];
+on conflict (id) do nothing;
 
 -- Drop existing storage policies
 drop policy if exists "Public read venue-media"   on storage.objects;
@@ -210,9 +207,9 @@ group by v.id, v.name;
 
 
 -- ============================================================
--- MIGRATIONS — columnas que se añaden sobre schema existente
--- (seguras de re-ejecutar: IF NOT EXISTS / ON CONFLICT)
+-- MIGRATIONS — columnas añadidas en versiones anteriores del schema
+-- (seguras de re-ejecutar con IF NOT EXISTS)
 -- ============================================================
 
--- audio_url en points (puede que la tabla ya existiera sin esta columna)
+-- Compatibilidad: si el proyecto tenía points sin audio_url, esta línea lo añade
 alter table points add column if not exists audio_url text;

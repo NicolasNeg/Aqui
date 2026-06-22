@@ -43,9 +43,16 @@ export default function ARView() {
     try {
       const DOE = DeviceOrientationEvent as any;
       if (typeof DOE.requestPermission === 'function') {
-        await DOE.requestPermission();
+        const result = await DOE.requestPermission();
+        if (result !== 'granted') {
+          setCameraError('Permiso de brújula denegado. Recarga para intentar de nuevo.');
+          return;
+        }
       }
-    } catch {}
+    } catch {
+      setCameraError('No se pudo solicitar permiso de brújula.');
+      return;
+    }
 
     // Camera (optional — AR arrow works without it)
     try {
