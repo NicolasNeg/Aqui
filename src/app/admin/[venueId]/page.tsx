@@ -90,6 +90,17 @@ export default function VenueAdmin() {
             <div className="text-sm font-semibold">Demo de visitante</div>
             <div className="text-xs text-warm-500 mt-1">Abre el sitio que verán tus visitantes</div>
           </Link>
+
+          <Link href={`/admin/${venueId}/edit`} className="surface p-5 rounded-xl active:scale-[0.99] transition-transform" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style={{ background: '#F5F0FF' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+            </div>
+            <div className="text-sm font-semibold">Editar plano</div>
+            <div className="text-xs text-warm-500 mt-1">Diseña habitaciones, puntos y rutas</div>
+          </Link>
         </div>
 
         {/* Points list */}
