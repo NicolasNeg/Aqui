@@ -21,14 +21,20 @@ export function ARArrow({ targetBearing }: ARArrowProps) {
   const [hasOrientation, setHasOrientation] = useState(false);
 
   useEffect(() => {
+    let gotAbsolute = false;
+
     function handleOrientation(e: DeviceOrientationEvent) {
-      // iOS: webkitCompassHeading is the true heading (0-360, increases CW)
+      // Prefer absolute compass; ignore relative deviceorientation once we have absolute
+      if (e.type === 'deviceorientation' && gotAbsolute) return;
+      if (e.type === 'deviceorientationabsolute') gotAbsolute = true;
+
+      // iOS: webkitCompassHeading is true heading (0-360, CW from north)
       const webkitHeading = (e as any).webkitCompassHeading;
       let h: number;
       if (typeof webkitHeading === 'number') {
         h = webkitHeading;
       } else if (e.alpha !== null) {
-        // Other browsers: alpha is 0-360 but counterclockwise from north
+        // deviceorientationabsolute: alpha is true compass heading (0=north, CW)
         h = 360 - e.alpha;
       } else {
         return;
@@ -37,12 +43,12 @@ export function ARArrow({ targetBearing }: ARArrowProps) {
       setHasOrientation(true);
     }
 
-    // iOS 13+ requires explicit permission
     const DOE = DeviceOrientationEvent as any;
     if (typeof DOE.requestPermission === 'function') {
-      // Already requested by parent — just attach listener
+      // iOS: permission already requested by parent page — just attach listener
       window.addEventListener('deviceorientation', handleOrientation, true);
     } else {
+      // Android: listen to both; absolute takes precedence via gotAbsolute flag
       window.addEventListener('deviceorientationabsolute' as any, handleOrientation, true);
       window.addEventListener('deviceorientation', handleOrientation, true);
     }
