@@ -240,7 +240,8 @@ export function VenueEditor({ venue }: { venue: Venue }) {
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>, kind: 'photo' | 'audio') {
     const file = e.target.files?.[0];
-    console.log('[upload] triggered', { file: file?.name, size: file?.size, selectedId, venueId: venue.id });
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    console.log('[upload] triggered', { file: file?.name, size: file?.size, selectedId, venueId: venue.id, supabaseConfigured: !!supabaseUrl, supabaseUrlStart: supabaseUrl?.slice(0, 30) });
     if (!file || !selectedId) {
       console.log('[upload] aborted — missing file or selectedId');
       return;
@@ -270,6 +271,8 @@ export function VenueEditor({ venue }: { venue: Venue }) {
       const buildings: Building[] = rooms.map(({ _id: _, ...b }) => b);
       const { error: venueErr } = await client.from('venues').upsert({
         id: venue.id,
+        name: venue.name,
+        type: venue.type,
         config: { floorWidth: venue.floorWidth, floorHeight: venue.floorHeight, buildings, paths },
         updated_at: new Date().toISOString(),
       }, { onConflict: 'id' });
