@@ -240,10 +240,15 @@ export function VenueEditor({ venue }: { venue: Venue }) {
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>, kind: 'photo' | 'audio') {
     const file = e.target.files?.[0];
-    if (!file || !selectedId) return;
+    console.log('[upload] triggered', { file: file?.name, size: file?.size, selectedId, venueId: venue.id });
+    if (!file || !selectedId) {
+      console.log('[upload] aborted — missing file or selectedId');
+      return;
+    }
     setUploading(true);
-    setSaveMsg('');
+    setSaveMsg('Subiendo…');
     const { url, error } = await uploadToStorage(file, venue.id, selectedId, kind);
+    console.log('[upload] result', { url, error });
     if (url) {
       updatePoint(kind === 'photo' ? 'imageUrl' : 'audioUrl', url);
       setSaveMsg('Archivo subido ✓');
