@@ -1,14 +1,15 @@
 -- ============================================================
 -- Aquí — Database Schema
 -- ============================================================
--- Pega este archivo completo en el SQL Editor de Supabase
--- (Dashboard → SQL Editor → New query → paste → Run)
+-- Pega este archivo completo en el SQL Editor de Supabase:
+-- Dashboard → SQL Editor → New query → paste → Run
 --
--- IMPORTANTE: Para MVP las políticas RLS son permisivas.
--- Antes de escalar a producción agrega autenticación.
+-- Es idempotente: puedes re-ejecutarlo sin perder datos.
+-- IMPORTANTE: Políticas RLS permisivas para MVP.
+-- Restringir antes de escalar a producción.
 -- ============================================================
 
--- Enable UUID generation
+-- UUID extension
 create extension if not exists "uuid-ossp";
 
 
@@ -35,6 +36,30 @@ create index if not exists venues_type_idx on venues(type);
 
 
 -- ============================================================
+-- POINTS — puntos en el plano de cada venue
+-- ============================================================
+
+create table if not exists points (
+  id          text not null,
+  venue_id    text not null references venues(id) on delete cascade,
+  name        text not null,
+  type        text default 'custom',
+  x           numeric not null,
+  y           numeric not null,
+  lat         numeric,
+  lng         numeric,
+  emoji       text,
+  color       text,
+  description text,
+  image_url   text,
+  audio_url   text,
+  primary key (venue_id, id)
+);
+
+create index if not exists points_venue_id_idx on points(venue_id);
+
+
+-- ============================================================
 -- TICKETS — invitaciones personales
 -- ============================================================
 
@@ -54,14 +79,14 @@ create table if not exists tickets (
   checked_in_at     timestamptz
 );
 
-create index if not exists tickets_venue_id_idx on tickets(venue_id);
-create index if not exists tickets_code_idx     on tickets(code);
-create index if not exists tickets_checked_in_idx on tickets(checked_in_at)
+create index if not exists tickets_venue_id_idx    on tickets(venue_id);
+create index if not exists tickets_code_idx        on tickets(code);
+create index if not exists tickets_checked_in_idx  on tickets(checked_in_at)
   where checked_in_at is not null;
 
 
 -- ============================================================
--- CHECKINS — log de cada validación
+-- CHECKINS — log de cada validación de ticket
 -- ============================================================
 
 create table if not exists checkins (
@@ -76,109 +101,118 @@ create index if not exists checkins_ticket_id_idx on checkins(ticket_id);
 
 
 -- ============================================================
--- POINTS — opcional: si quieres mover los puntos a la DB
--- en vez de hardcodearlos. Por ahora vive en src/data/demo-venue.ts
--- ============================================================
-
-create table if not exists points (
-  id          text not null,
-  venue_id    text not null references venues(id) on delete cascade,
-  name        text not null,
-  type        text default 'custom',
-  x           numeric not null,
-  y           numeric not null,
-  lat         numeric,
-  lng         numeric,
-  emoji       text,
-  color       text,
-  description text,
-  image_url   text,
-  primary key (venue_id, id)
-);
-
-
--- ============================================================
--- ROW LEVEL SECURITY (permisivo — agrega auth antes de scale)
+-- ROW LEVEL SECURITY
 -- ============================================================
 
 alter table venues   enable row level security;
+alter table points   enable row level security;
 alter table tickets  enable row level security;
 alter table checkins enable row level security;
-alter table points   enable row level security;
 
--- Lectura pública (cualquier visitante puede ver)
-drop policy if exists "Public read venues"   on venues;
-drop policy if exists "Public read tickets"  on tickets;
-drop policy if exists "Public read points"   on points;
-drop policy if exists "Public read checkins" on checkins;
+-- Drop existing policies (idempotent)
+drop policy if exists "Public read venues"     on venues;
+drop policy if exists "Public insert venues"   on venues;
+drop policy if exists "Public update venues"   on venues;
+drop policy if exists "Public delete venues"   on venues;
 
-create policy "Public read venues"   on venues   for select using (true);
-create policy "Public read tickets"  on tickets  for select using (true);
-create policy "Public read points"   on points   for select using (true);
-create policy "Public read checkins" on checkins for select using (true);
+drop policy if exists "Public read points"     on points;
+drop policy if exists "Public insert points"   on points;
+drop policy if exists "Public update points"   on points;
+drop policy if exists "Public delete points"   on points;
 
--- Escritura pública (necesario para crear tickets desde el admin sin auth)
--- ⚠️ Esto se debe restringir antes de producción real
-drop policy if exists "Public insert tickets"      on tickets;
-drop policy if exists "Public update tickets"      on tickets;
-drop policy if exists "Public insert checkins"     on checkins;
-drop policy if exists "Public insert venues"       on venues;
-drop policy if exists "Public update venues"       on venues;
-drop policy if exists "Public insert points"       on points;
-drop policy if exists "Public update points"       on points;
-drop policy if exists "Public delete points"       on points;
+drop policy if exists "Public read tickets"    on tickets;
+drop policy if exists "Public insert tickets"  on tickets;
+drop policy if exists "Public update tickets"  on tickets;
+drop policy if exists "Public delete tickets"  on tickets;
 
-create policy "Public insert tickets"  on tickets  for insert with check (true);
-create policy "Public update tickets"  on tickets  for update using (true);
+drop policy if exists "Public read checkins"   on checkins;
+drop policy if exists "Public insert checkins" on checkins;
+
+-- venues
+create policy "Public read venues"   on venues for select using (true);
+create policy "Public insert venues" on venues for insert with check (true);
+create policy "Public update venues" on venues for update using (true);
+create policy "Public delete venues" on venues for delete using (true);
+
+-- points
+create policy "Public read points"   on points for select using (true);
+create policy "Public insert points" on points for insert with check (true);
+create policy "Public update points" on points for update using (true);
+create policy "Public delete points" on points for delete using (true);
+
+-- tickets
+create policy "Public read tickets"   on tickets for select using (true);
+create policy "Public insert tickets" on tickets for insert with check (true);
+create policy "Public update tickets" on tickets for update using (true);
+create policy "Public delete tickets" on tickets for delete using (true);
+
+-- checkins (solo lectura + inserción — nunca se borran del log)
+create policy "Public read checkins"   on checkins for select using (true);
 create policy "Public insert checkins" on checkins for insert with check (true);
-create policy "Public insert venues"   on venues   for insert with check (true);
-create policy "Public update venues"   on venues   for update using (true);
-create policy "Public insert points"   on points   for insert with check (true);
-create policy "Public update points"   on points   for update using (true);
-create policy "Public delete points"   on points   for delete using (true);
 
 
 -- ============================================================
--- HELPER VIEWS
+-- STORAGE — bucket venue-media (imágenes y audios de puntos)
 -- ============================================================
 
--- Resumen de invitados por venue
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'venue-media',
+  'venue-media',
+  true,
+  10485760,  -- 10 MB por archivo
+  array['image/jpeg','image/png','image/webp','image/gif','audio/mpeg','audio/mp4','audio/wav','audio/ogg']
+)
+on conflict (id) do update set
+  public             = true,
+  file_size_limit    = 10485760,
+  allowed_mime_types = array['image/jpeg','image/png','image/webp','image/gif','audio/mpeg','audio/mp4','audio/wav','audio/ogg'];
+
+-- Drop existing storage policies
+drop policy if exists "Public read venue-media"   on storage.objects;
+drop policy if exists "Public insert venue-media" on storage.objects;
+drop policy if exists "Public update venue-media" on storage.objects;
+drop policy if exists "Public delete venue-media" on storage.objects;
+
+-- Storage policies
+create policy "Public read venue-media"
+  on storage.objects for select
+  using (bucket_id = 'venue-media');
+
+create policy "Public insert venue-media"
+  on storage.objects for insert
+  with check (bucket_id = 'venue-media');
+
+create policy "Public update venue-media"
+  on storage.objects for update
+  using (bucket_id = 'venue-media')
+  with check (bucket_id = 'venue-media');
+
+create policy "Public delete venue-media"
+  on storage.objects for delete
+  using (bucket_id = 'venue-media');
+
+
+-- ============================================================
+-- HELPER VIEW — resumen por venue
+-- ============================================================
+
 create or replace view venue_stats as
 select
-  v.id                                        as venue_id,
-  v.name                                      as venue_name,
-  count(t.id)                                 as total_tickets,
-  count(t.id) filter (where t.checked_in_at is not null) as checked_in,
-  count(t.id) filter (where t.checked_in_at is null)     as pending
+  v.id                                                               as venue_id,
+  v.name                                                             as venue_name,
+  count(t.id)                                                        as total_tickets,
+  count(t.id) filter (where t.checked_in_at is not null)            as checked_in,
+  count(t.id) filter (where t.checked_in_at is null)                as pending
 from venues v
 left join tickets t on t.venue_id = v.id
 group by v.id, v.name;
 
 
 -- ============================================================
--- MIGRATIONS (apply after initial schema)
+-- MIGRATIONS — columnas que se añaden sobre schema existente
+-- (seguras de re-ejecutar: IF NOT EXISTS / ON CONFLICT)
 -- ============================================================
 
--- Add audio support to points
-ALTER TABLE points ADD COLUMN IF NOT EXISTS audio_url text;
-
--- Supabase Storage: venue media bucket
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('venue-media', 'venue-media', true)
-ON CONFLICT (id) DO NOTHING;
-
-DROP POLICY IF EXISTS "Public read venue-media"    ON storage.objects;
-DROP POLICY IF EXISTS "Public insert venue-media"  ON storage.objects;
-DROP POLICY IF EXISTS "Public update venue-media"  ON storage.objects;
-
-CREATE POLICY "Public read venue-media"
-  ON storage.objects FOR SELECT
-  USING (bucket_id = 'venue-media');
-
-CREATE POLICY "Public insert venue-media"
-  ON storage.objects FOR INSERT
-  WITH CHECK (bucket_id = 'venue-media');
-
-CREATE POLICY "Public update venue-media"
-  ON storage.objects FOR UPDATE
-  USING (bucket_id = 'venue-media');
+-- audio_url en points (puede que la tabla ya existiera sin esta columna)
+alter table points add column if not exists audio_url text;
