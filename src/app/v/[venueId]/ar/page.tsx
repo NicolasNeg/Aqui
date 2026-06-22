@@ -19,6 +19,7 @@ export default function ARView() {
 
   const [needsPermission, setNeedsPermission] = useState(false);
   const [hasCamera, setHasCamera] = useState(false);
+  const [hasPermission, setHasPermission] = useState(false);
   const [cameraError, setCameraError] = useState('');
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const watcherRef = useRef<number | null>(null);
@@ -38,7 +39,15 @@ export default function ARView() {
   async function requestPermissions() {
     setNeedsPermission(false);
 
-    // Camera
+    // ponytail: orientation MUST be requested first on iOS — gesture context expires after first await
+    try {
+      const DOE = DeviceOrientationEvent as any;
+      if (typeof DOE.requestPermission === 'function') {
+        await DOE.requestPermission();
+      }
+    } catch {}
+
+    // Camera (optional — AR arrow works without it)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment' },
@@ -53,13 +62,7 @@ export default function ARView() {
       setCameraError(err?.message || 'Sin permiso de cámara');
     }
 
-    // Orientation (iOS)
-    try {
-      const DOE = DeviceOrientationEvent as any;
-      if (typeof DOE.requestPermission === 'function') {
-        await DOE.requestPermission();
-      }
-    } catch {}
+    setHasPermission(true);
 
     // GPS
     if (navigator.geolocation) {
@@ -120,7 +123,7 @@ export default function ARView() {
       />
 
       {/* AR arrow overlay */}
-      {hasCamera && <ARArrow targetBearing={targetBearing} />}
+      {hasPermission && <ARArrow targetBearing={targetBearing} />}
 
       {/* Top status bar */}
       <div
@@ -134,7 +137,7 @@ export default function ARView() {
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full" style={{ background: '#34D399' }} />
           <span className="text-xs text-white font-semibold">
-            {hasCamera ? 'Modo AR activo' : 'Iniciando…'}
+            {hasCamera ? 'Modo AR activo' : hasPermission ? 'Brújula activa' : 'Iniciando…'}
           </span>
         </div>
         {gpsAccuracy !== null && (
