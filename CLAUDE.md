@@ -1,72 +1,128 @@
-# CLAUDE.md
+# CLAUDE.md — Contexto del proyecto "Aquí"
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+> Este archivo lo lee Claude Code automáticamente. Resume qué es el proyecto,
+> cómo está organizado, las reglas para no ensuciarlo, y el roadmap hasta MVP.
 
-## Commands
+## Qué es
+
+**Aquí** es un sistema de **navegación + información + control de acceso por QR**
+para cualquier espacio (bodas, festivales, museos, hoteles, malls…). El visitante
+escanea un QR físico "Usted está aquí", ve dónde está, elige destino, y lo guía
+con un **mapa SVG con ruta animada** y una **vista AR con flecha 3D** (brújula del
+teléfono). Los admins **crean venues con un editor visual de planos**, generan QRs
+imprimibles y **tickets personales** por invitado con **check-in/validación** de
+acceso. Sin apps, sin instalar.
+
+## Stack
+
+- **Next.js 14** (App Router, React 18, todo en `'use client'` por ahora)
+- **TypeScript** estricto · **Tailwind CSS** (tokens de marca en `tailwind.config.ts` + `globals.css`)
+- **Supabase** (Postgres + Storage) — **opcional**: sin él, la app corre en **modo demo** con datos hardcoded
+- `html5-qrcode` (escaneo) · `qrcode` (generación) · DeviceOrientation/MediaStream (AR)
+
+## Comandos
 
 ```bash
-npm run dev      # Start dev server at http://localhost:3000
-npm run build    # Production build
-npm run lint     # ESLint via next lint
+npm run dev        # desarrollo en http://localhost:3000
+npm run build      # build de producción (corre lint + typecheck)
+npm run lint       # ESLint (next/core-web-vitals)
+npx tsc --noEmit   # solo chequeo de tipos
 ```
 
-There is no test suite. Verification is manual via the browser.
+**Antes de cada commit, deja esto en verde:** `npm run lint && npx tsc --noEmit && npm run build`.
 
-## Environment
+## Mapa del código (dónde vive cada cosa)
 
-Copy `.env.local.example` to `.env.local`. Supabase vars are optional — without them the app runs entirely in demo mode with hardcoded data. Set `NEXT_PUBLIC_APP_URL` to whatever domain QR codes should point at (defaults to `window.location.origin` in the browser).
+```
+src/
+├─ app/            Rutas (App Router). Cada carpeta = una ruta.
+│  ├─ page.tsx                       Landing comercial
+│  ├─ v/[venueId]/                   VISITANTE: page (escanear/destinos),
+│  │                                 map, ar, checkin, t/[ticketCode] (ticket)
+│  └─ admin/                         ADMIN: dashboard, venues/new (crear),
+│                                    [venueId] (detalle), [venueId]/edit (editor),
+│                                    qr-points (imprimibles), tickets (invitaciones)
+├─ components/     UI presentacional (datos por props). icons.tsx = SVGs compartidos.
+│  └─ VenueEditor.tsx   Editor SVG de planos: 4 modos (habitación/punto/conectar/seleccionar)
+├─ hooks/          useVenue.ts → carga el venue (Supabase primero, fallback demo)
+├─ lib/            Lógica pura SIN React:
+│  ├─ types.ts        Tipos del dominio (Venue, Point, Building, Ticket, RouteResult…)
+│  ├─ venues.ts       VenueRow/PointRow + mapVenueRow + fetchVenue (desde Supabase)
+│  ├─ routing.ts      Grafo BFS + bearings + distancia + ETA
+│  ├─ scan.ts         Parseo del texto de un QR escaneado (ubicación / ticket)
+│  ├─ url.ts          getBaseUrl + URLs públicas (ubicación, ticket)
+│  ├─ tickets.ts      TicketRow (fila DB) + mapTicketRow (→ dominio camelCase)
+│  └─ supabase/       env.ts (¿configurado?) · client.ts (browser) · server.ts (SSR)
+└─ data/demo-venue.ts  Venues demo hardcoded (Plaza Aquí + Boda) — fallback sin Supabase
+supabase/            schema.sql (tablas + RLS + bucket venue-media) · seed.sql (datos demo)
+```
 
-## Architecture
+### Regla de oro (para escalar sin desorden)
+Si algo (texto, SVG, cálculo, fetch) se repite en **2+ páginas**, muévelo a
+`lib/` (lógica), `hooks/` (estado React) o `components/` (UI). Esa regla es la que
+ya bajó la duplicación; mantenla.
 
-**Aquí** is a Next.js 14 App Router app that lets venue visitors scan a "You are here" QR code and get turn-by-turn navigation to any point of interest, without installing an app.
+## Conceptos clave del dominio
 
-### Route trees
+- **Venue**: espacio con `points` (Record por id), `buildings` (rects del plano — `Building.id?` es solo local en el editor, no se persiste) y `paths` (lista de aristas `[from,to]`). El layout va en `venues.config` JSONB; los puntos van en la tabla `points`.
+- **Routing** (`lib/routing.ts`): `computeRoute(venue, from, to)` → BFS por saltos, distancia euclidiana entre puntos (≈ metros), ETA a ~70 m/min. `bearingBetween` y `describeTurn` alimentan la flecha AR y las instrucciones del mapa.
+- **Modo demo vs Supabase**: `isSupabaseConfigured()` decide. `useVenue` intenta `fetchVenue` desde Supabase; si falla o no hay conexión, cae a `getDemoVenue`. El admin dashboard también carga de Supabase con fallback a `DEMO_VENUES`.
+- **VenueEditor**: SVG canvas nativo (sin librerías), 4 modos de edición. Guarda en Supabase con upsert de `venues.config` + upsert/delete de `points`. Media sube al bucket `venue-media` en Storage.
+- **Dos tipos de QR**:
+  - *Ubicación*: `…/v/{venueId}?loc={pointId}` → `parseScannedLocation()`
+  - *Ticket*: `…/v/{venueId}/t/{code}` → `parseScannedTicketCode()`
+- **Check-in**: el staff escanea el QR del invitado → valida (válido / ya entró /
+  inválido / evento equivocado) y marca `checked_in_at` + registra en `checkins`.
 
-| Prefix | Audience |
-|---|---|
-| `/v/[venueId]/*` | Visitor-facing (mobile, no auth) |
-| `/admin/*` | Venue admin (Supabase auth when configured; open in demo mode) |
+## Gotchas (cosas que muerden)
 
-Visitor sub-routes: `page.tsx` (scan / destination list) → `map/page.tsx` (SVG floor plan + route) → `ar/page.tsx` (camera + compass arrow). Ticketed venues add `t/[ticketCode]/page.tsx` (guest QR view) and `checkin/page.tsx` (staff scanner).
+- **`NEXT_PUBLIC_*` se hornea en build.** Si cambias env vars en Vercel, hay que
+  **redeploy**. Sin `NEXT_PUBLIC_APP_URL`, `getBaseUrl()` usa `window.location.origin`.
+- **Cámara y AR requieren HTTPS** (Vercel sí, `localhost` a veces no). En iOS, el AR
+  pide permiso de orientación explícito (ya manejado en `ar/page.tsx`).
+- **RLS permisiva**: `schema.sql` deja lectura/escritura pública para que el MVP
+  funcione sin auth. **Restringir antes de producción** (ver roadmap P0).
+- **Storage `venue-media` público**: INSERT/UPDATE sin auth. Antes de escalar, agregar restricciones de tamaño y rate limiting.
+- **Migración SQL manual**: el final de `supabase/schema.sql` incluye `ALTER TABLE points ADD COLUMN audio_url` y el bucket `venue-media`. Aplicar en Supabase Dashboard → SQL Editor si no se hizo aún.
+- **`createClient()` puede retornar `null`**: siempre null-check antes de usarlo.
+- **Faltan iconos PWA**: `public/manifest.json` referencia `icon-192.png` y
+  `icon-512.png` que no existen en `public/`.
 
-### Data flow
+## Estado actual
 
-All pages load venue data through `useVenue` (`src/hooks/useVenue.ts`). The hook tries Supabase first via `fetchVenue` (`src/lib/venues.ts`), then falls back to bundled demo data in `src/data/demo-venue.ts`. Lazy init keeps SSR and the first client render in sync (no loading flash).
+- ✅ Builda en verde (tsc + lint + `next build`, 13 rutas).
+- ✅ Supabase conectado: venues, points, tickets, checkins, Storage (`venue-media`).
+- ✅ `useVenue` y admin dashboard cargan de Supabase con fallback a demo.
+- ✅ Editor visual de venues: `/admin/venues/new` → `/admin/[venueId]/edit` (SVG canvas, 4 modos, media upload).
+- ✅ DestinationCard muestra foto y player de audio cuando el punto tiene media.
+- ✅ Auth en `/admin` vía middleware (Supabase Auth cuando está configurado).
 
-### Venue model (`src/lib/types.ts`)
+## Roadmap (priorizado)
 
-A `Venue` has:
-- `points: Record<string, Point>` — named locations with floor-plan `x/y` coordinates (≈ meters) and optional GPS `lat/lng`
-- `paths: [string, string][]` — undirected adjacency list forming the walkable graph
-- `buildings: Building[]` — rectangles drawn on the SVG floor plan
-- `requiresTicket` — gates whether the ticket/check-in flow is active
+### P0 — antes de producción real
+- [ ] **Restringir RLS**: columna `owner_id` en `venues` + políticas por dueño.
+- [ ] **Multi-tenant auth**: login de clientes, cada uno ve solo sus venues.
+- [ ] **Limpieza de media**: al borrar un punto, borrar sus archivos en Storage.
+- [ ] **Editar nombre de habitación** en el editor (hoy read-only en side panel).
+- [ ] **Estados de error/vacío consistentes**: unificar componente de error.
 
-### Routing (`src/lib/routing.ts`)
+### P1 — experiencia
+- [ ] **Outdoor / GPS**: venues al aire libre con lat/lng en puntos.
+- [ ] **Multi-piso**: soporte para varios niveles.
+- [ ] **i18n** (multi-idioma) — el landing lo promete.
+- [ ] **PWA**: `icon-192.png` y `icon-512.png`; service worker offline.
 
-`computeRoute(venue, fromId, toId)` runs BFS on `venue.paths` and returns `{ path, distance, estimatedMinutes }`. Distance is Euclidean in floor-plan units (≈ meters). ETA assumes 70 m/min walking pace. `bearingBetween` and `describeTurn` power the AR and turn-instruction UI.
+### P2 — negocio
+- [ ] Stripe (suscripciones) · onboarding self-service · white-label · analytics.
 
-### QR encoding (`src/lib/scan.ts`)
+### Deuda técnica
+- [ ] **Tests**: Vitest sobre `lib/{routing,scan,url,tickets}` (lógica pura).
+- [ ] Validar formularios en `admin/.../tickets` (email/teléfono).
+- [ ] `ARArrow` tiene prop `showCalibrationHint` sin usar.
+- [ ] `metadataBase` en `app/layout.tsx` para Open Graph.
 
-Two QR types coexist:
-- **Location QR** — encodes a full URL `https://…/v/{venue}?loc={pointId}` or a bare point id. Parsed by `parseScannedLocation`.
-- **Ticket QR** — encodes `/v/{venue}/t/{code}` or a bare code. Parsed by `parseScannedTicketCode`.
-
-Both parsers accept either a full URL or a bare identifier, so printed QRs and manual entry both work.
-
-### Supabase integration
-
-`src/lib/supabase/env.ts` — `isSupabaseConfigured()` is the single source of truth for whether a real DB is wired up (checks for placeholder host `tuproyecto`). `client.ts` / `server.ts` export the browser and server Supabase clients.
-
-`src/lib/venues.ts` — `fetchVenue(client, id)` fetches a venue row + its point rows and maps them to the domain `Venue` type. `VenueConfig` is a JSONB blob on the venues table that holds `floorWidth`, `floorHeight`, `buildings`, `paths`, and `logoUrl`.
-
-`src/lib/tickets.ts` — `TicketRow` DB shape and `mapTicketRow` to convert snake_case rows to camelCase domain `Ticket` objects.
-
-`src/middleware.ts` — protects `/admin/*` routes. Passes through when Supabase is not configured. When configured, redirects unauthenticated requests to `/admin/login` and bounces authenticated users away from the login page.
-
-### Adding a new venue
-
-Add a new `Venue` object to `src/data/demo-venue.ts` and register it in the `DEMO_VENUES` record. It becomes available at `/v/{id}` immediately. Floor-plan coordinates should fit within `floorWidth × floorHeight`. Paths must form a connected graph for routing to work.
-
-### Design system
-
-Tailwind design tokens are in `tailwind.config.ts` (brand colors, warm neutrals). Global CSS utility classes (`btn`, `surface`, `label-text`, etc.) are in `src/app/globals.css`. The color palette centers on ink (`#0F1B2E`), red (`#E63946`), and cream (`#F9F6F0`).
+## Convenciones de estilo
+- Comentarios y nombres en inglés (como el código actual); contenido de UI en español.
+- Reusa los tokens de marca (`text-red`, `bg-ink`, vars CSS) en vez de hex sueltos
+  cuando sea natural — pero **no rompas el diseño**, está calibrado al pitch.
+- Componentes nuevos de íconos → `components/icons.tsx`.
