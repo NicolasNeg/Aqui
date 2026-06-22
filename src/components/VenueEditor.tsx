@@ -46,14 +46,15 @@ async function uploadToStorage(
   venueId: string,
   pointId: string,
   kind: 'photo' | 'audio'
-): Promise<string | null> {
+): Promise<{ url: string | null; error: string | null }> {
   const client = createClient();
-  if (!client) return null;
+  if (!client) return { url: null, error: 'Sin conexión a Supabase' };
   const ext = file.name.split('.').pop() ?? 'bin';
   const path = `${venueId}/${pointId}/${kind}.${ext}`;
   const { error } = await client.storage.from('venue-media').upload(path, file, { upsert: true });
-  if (error) return null;
-  return client.storage.from('venue-media').getPublicUrl(path).data.publicUrl;
+  if (error) return { url: null, error: error.message };
+  const url = client.storage.from('venue-media').getPublicUrl(path).data.publicUrl;
+  return { url, error: null };
 }
 
 const POINT_TYPES: { value: PointType; label: string; emoji: string }[] = [
@@ -238,8 +239,14 @@ export function VenueEditor({ venue }: { venue: Venue }) {
     const file = e.target.files?.[0];
     if (!file || !selectedId) return;
     setUploading(true);
-    const url = await uploadToStorage(file, venue.id, selectedId, kind);
-    if (url) updatePoint(kind === 'photo' ? 'imageUrl' : 'audioUrl', url);
+    setSaveMsg('');
+    const { url, error } = await uploadToStorage(file, venue.id, selectedId, kind);
+    if (url) {
+      updatePoint(kind === 'photo' ? 'imageUrl' : 'audioUrl', url);
+      setSaveMsg('Archivo subido ✓');
+    } else {
+      setSaveMsg(`Error al subir: ${error}`);
+    }
     setUploading(false);
     e.target.value = '';
   }
