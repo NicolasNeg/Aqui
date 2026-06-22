@@ -52,7 +52,10 @@ async function uploadToStorage(
   const ext = file.name.split('.').pop() ?? 'bin';
   const path = `${venueId}/${pointId}/${kind}.${ext}`;
   const { error } = await client.storage.from('venue-media').upload(path, file, { upsert: true });
-  if (error) return { url: null, error: error.message };
+  if (error) {
+    console.error('[VenueEditor] Storage upload error:', error);
+    return { url: null, error: error.message };
+  }
   const url = client.storage.from('venue-media').getPublicUrl(path).data.publicUrl;
   return { url, error: null };
 }
