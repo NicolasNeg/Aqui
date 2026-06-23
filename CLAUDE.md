@@ -115,6 +115,12 @@ ya bajó la duplicación; mantenla.
 ### P2 — negocio
 - [ ] Stripe (suscripciones) · onboarding self-service · white-label · analytics.
 
+### Bugs conocidos — AR / Brújula / GPS
+- [ ] **Tilt compensation en Android**: `ARArrow` usa `360 - e.alpha` que solo es correcto con el teléfono plano. A ~70° de inclinación (AR real) el heading deriva 10-30°. Necesita compensación con `beta`/`gamma` de `DeviceOrientationEvent` o usar `AbsoluteOrientationSensor` de la Generic Sensor API.
+- [ ] **Race condition `gotAbsolute`**: en Android, `deviceorientation` puede llegar antes que `deviceorientationabsolute` y mostrar un heading relativo brevemente. Solución: registrar `deviceorientation` solo si `deviceorientationabsolute` no llega en los primeros 500ms.
+- [ ] **Sin retry de cámara en Android**: si el usuario deniega la cámara en Android (no-iOS), no hay botón para volver a pedirla. El flujo muestra el error pero no ofrece reintentar sin recargar la página. Archivo: `src/app/v/[venueId]/ar/page.tsx`.
+- [ ] **Strict Mode stream leak**: en desarrollo (React 18 Strict Mode), el doble-effect invocation deja un `MediaStream` huérfano activo (luz de cámara encendida). Afecta solo `npm run dev`, no producción.
+
 ### Deuda técnica
 - [ ] **Tests**: Vitest sobre `lib/{routing,scan,url,tickets}` (lógica pura).
 - [ ] Validar formularios en `admin/.../tickets` (email/teléfono).
